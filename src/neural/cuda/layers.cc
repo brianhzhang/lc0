@@ -42,11 +42,17 @@ static constexpr bool kUseFusedSELayer = true;
 
 template <typename DataType>
 BaseLayer<DataType>::BaseLayer(int c, int h, int w, BaseLayer* ip, bool nhwc)
-    : input_(ip), C(c), H(h), W(w), nhwc_(nhwc) {}
+    : input_(ip), C(c), H(h), W(w), nhwc_(nhwc) {
+  const size_t cache_size = GetOutputSize(1024);
+  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));  
+}
 
 template <typename DataType>
 BaseLayer<DataType>::BaseLayer(int c, int h, int w, BaseLayer* ip)
-    : input_(ip), C(c), H(h), W(w), nhwc_(ip->nhwc_) {}
+    : input_(ip), C(c), H(h), W(w), nhwc_(ip->nhwc_) {
+  const size_t cache_size = GetOutputSize(1024);
+  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));  
+}
 
 #ifdef USE_CUDNN
 template <typename DataType>

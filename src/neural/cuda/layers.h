@@ -58,6 +58,8 @@ class BaseLayer {
                     const DataType* input2, void* scratch, size_t scratch_size,
                     cudnnHandle_t cudnn, cublasHandle_t cublas) = 0;
 
+  DataType* cache_;
+
  protected:
   BaseLayer* input_;
 
