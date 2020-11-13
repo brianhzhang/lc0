@@ -30,6 +30,9 @@
 #include <vector>
 #include "cuda_common.h"
 #include "kernels.h"
+
+#include <iostream>
+
 namespace lczero {
 //void dumpTensor(void* memory, int elements, const char* message, bool fp16 = false);
 
@@ -44,14 +47,14 @@ template <typename DataType>
 BaseLayer<DataType>::BaseLayer(int c, int h, int w, BaseLayer* ip, bool nhwc)
     : input_(ip), C(c), H(h), W(w), nhwc_(nhwc) {
   const size_t cache_size = GetOutputSize(1024);
-  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));  
+  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));
 }
 
 template <typename DataType>
 BaseLayer<DataType>::BaseLayer(int c, int h, int w, BaseLayer* ip)
     : input_(ip), C(c), H(h), W(w), nhwc_(ip->nhwc_) {
   const size_t cache_size = GetOutputSize(1024);
-  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));  
+  ReportCUDAErrors(cudaMalloc(&cache_, cache_size));
 }
 
 #ifdef USE_CUDNN
@@ -174,6 +177,7 @@ ConvLayer<DataType>::ConvLayer(bool nhwc, int C, int H, int W, int filter,
 
 template <>
 void ConvLayer<half>::LoadWeights(float* pfilter, float* pBias, void* scratch) {
+  std::cout << "load weights for ConvLayer<half>" << std::endl;
   const size_t weight_size =
       sizeof(float) * c_input_ * C * filter_size_ * filter_size_;
   const size_t bias_size = sizeof(float) * C;
@@ -203,6 +207,7 @@ void ConvLayer<half>::LoadWeights(float* pfilter, float* pBias, void* scratch) {
 template <>
 void ConvLayer<float>::LoadWeights(float* pfilter, float* pBias,
                                    void* /*scratch*/) {
+  std::cout << "load weights for ConvLayer<float>" << std::endl;
   const size_t weight_size =
       sizeof(float) * c_input_ * C * filter_size_ * filter_size_;
   const size_t bias_size = sizeof(float) * C;
@@ -337,6 +342,7 @@ SELayer<DataType>::~SELayer() {
 template <>
 void SELayer<float>::LoadWeights(float* w1, float* b1, float* w2, float* b2,
                                  float* prevLayerBias, void* /*scratch*/) {
+  std::cout << "load weights for SELayer<float>" << std::endl;
   const size_t num_weights1 = C * numFc1Out_;
   const size_t weight_size1 = sizeof(float) * num_weights1;
 
@@ -371,6 +377,7 @@ void cpuTranspose(float* op, float* ip, int rows, int cols) {
 template <>
 void SELayer<half>::LoadWeights(float* w1, float* b1, float* w2, float* b2,
                                 float* prevLayerBias, void* scratch) {
+  std::cout << "SELayer<half>" << std::endl;
   const size_t num_weights1 = C * numFc1Out_;
   size_t weight_size1 = sizeof(float) * num_weights1;
 
@@ -517,6 +524,7 @@ FCLayer<DataType>::FCLayer(BaseLayer<DataType>* ip, int C, int H, int W,
 template <>
 void FCLayer<half>::LoadWeights(float* cpuWeight, float* cpuBias,
                                 void* scratch) {
+  std::cout << "load weights for FCLayer<half>" << std::endl;
   const size_t num_weights =
       C * H * W * input_->GetC() * input_->GetH() * input_->GetW();
   const size_t weight_size = sizeof(float) * num_weights;
@@ -546,6 +554,7 @@ void FCLayer<half>::LoadWeights(float* cpuWeight, float* cpuBias,
 template <>
 void FCLayer<float>::LoadWeights(float* cpuWeight, float* cpuBias,
                                  void* /*scratch*/) {
+  std::cout << "load weights for FCLayer<float>" << std::endl;
   const size_t num_weights =
       C * H * W * input_->GetC() * input_->GetH() * input_->GetW();
   const size_t weight_size = sizeof(float) * num_weights;
@@ -623,6 +632,7 @@ PolicyMapLayer<DataType>::PolicyMapLayer(BaseLayer<DataType>* ip, int C, int H,
 template <typename DataType>
 void PolicyMapLayer<DataType>::LoadWeights(const short* cpuWeight,
                                            void* /*scratch*/) {
+  std::cout << "load weights for PolicyMapLayer<?>" << std::endl;
   size_t weight_size = sizeof(short) * used_size_;
 
   if (nhwc_) {
@@ -759,6 +769,7 @@ template <typename DataType>
 void FusedWinogradConvSELayer<DataType>::LoadWeights(float* pfilter,
                                                      float* pBias,
                                                      void* scratch) {
+  std::cout << "load weights for FusedWinogradConvSELayer<?>" << std::endl;
   const size_t weight_size = sizeof(float) * c_input_ * C * 3 * 3;
   const size_t bias_size = sizeof(float) * C;
 
@@ -878,7 +889,7 @@ void FusedWinogradConvSELayer<DataType>::Eval(
 
   InputTransform<DataType>(N, c_input_, transformed_input, input);
 
-  cublasRowMajorMatrixMul(transformed_input, transformed_weights_, transformed_output, N*4, C, c_input_, 36, cublas);  
+  cublasRowMajorMatrixMul(transformed_input, transformed_weights_, transformed_output, N*4, C, c_input_, 36, cublas);
 
   if (has_se_ && use_relu_ && use_bias_ && skip_add_)
     OutputTransform<DataType, true, true, true, true>(
@@ -935,6 +946,7 @@ Conv1Layer<DataType>::Conv1Layer(BaseLayer<DataType>* ip, int C, int H, int W,
 template <typename DataType>
 void Conv1Layer<DataType>::LoadWeights(float* pfilter, float* pBias,
                                        void* scratch) {
+  std::cout << "load weights for Conv1Layer<?>" << std::endl;
   const size_t weight_size = sizeof(float) * c_input_ * C * 1 * 1;
   const size_t bias_size = sizeof(float) * C;
 
@@ -1060,6 +1072,7 @@ template <typename DataType>
 void ResidualBlock<DataType>::LoadWeights0(float* pfilter,
                                            float* pBias,
                                            void* scratch) {
+  std::cout << "load weights (0) for ResidualBlock<?>" << std::endl;
 
   const size_t weight_size = sizeof(float) * c_input_ * C * 3 * 3;
   const size_t bias_size = sizeof(float) * C;
@@ -1087,6 +1100,7 @@ void ResidualBlock<DataType>::LoadWeights0(float* pfilter,
 template <typename DataType>
 void ResidualBlock<DataType>::LoadWeights1(float* pfilter, float* pBias,
                                            void* scratch) {
+  std::cout << "load weights (0) for ResidualBlock<?>" << std::endl;
   const size_t weight_size = sizeof(float) * C * C * 3 * 3;
   const size_t bias_size = sizeof(float) * C;
 
@@ -1190,7 +1204,7 @@ void ResidualBlock<DataType>::Eval(
     cublasHandle_t cublas) {
 
   // normally:
-  // - "output" initially contains the transformed input, 
+  // - "output" initially contains the transformed input,
   //    and after this layer, it contains the transformed input for next layer
   // - "input" contains the original/untransformed input
   // special cases:
@@ -1211,7 +1225,7 @@ void ResidualBlock<DataType>::Eval(
   } else {
     cublasRowMajorMatrixMul(output, transformed_weights0_,
                             transformed_output, N * 4, C, c_input_, 36, cublas);
- 
+
   }
 
   OutputInputTransform<DataType, false, true, true, false>(
